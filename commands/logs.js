@@ -1,88 +1,83 @@
-module.exports = (options) => {
-  const { inquire } = require('../lib/inquire')(options);
-  const { request } = require('../lib/request')(options);
-  const requireOptions = require('../lib/requireOptions');
-  const lodash = require('lodash');
-  const chalk = require('chalk');
-  const pretty = require('pretty-js');
-  const extend = lodash.extend;
-  const find = lodash.find;
-  const map = lodash.map;
+const { extend, find, map } = require('lodash');
+const { countNumberOfLines } = require('../helpers/string');
+const Request = require('../lib/request');
+const Inquire = require('../lib/inquire');
+const requireOptions = require('../lib/requireOptions');
+const chalk = require('chalk');
+const pretty = require('pretty-js');
 
-  run(options);
+module.exports = class Logs {
 
-  function run(options) {
-    normalizeOptions(options)
+  constructor(options) {
+    this.request = Request(options).request;
+    this.inquire = Inquire(options);
+    this.normalizeOptions(options)
       .then(requireOptions(['pipeline']))
-      .then(loadHistory)
-      .then(parseHistory)
-      .then(log)
+      .then(this.loadHistory.bind(this))
+      .then(this.parseHistory.bind(this))
+      .then(this.log.bind(this))
       .catch(err => { console.log(err.stack); throw new Error(err) });
   }
 
-  function normalizeOptions(options) {
-    options.startLineNumber = parseInt(options.startLineNumber || 0, 10);
-    options.interval = parseInt(options.interval || 1000, 10);
+  normalizeOptions(options) {
+    this.stage = options.stage;
+    this.startLineNumber = parseInt(options.startLineNumber || 0, 10);
+    this.interval = parseInt(options.interval || 1000, 10);
 
     return Promise.resolve(options);
   }
 
-  function loadHistory(options) {
-    return request(`/api/pipelines/${options.pipeline}/history`)
+  loadHistory(options) {
+    const pipeline = options.pipeline;
+    return this.request(`/api/pipelines/${pipeline}/history`)
       .then(body => JSON.parse(body));
   }
 
-  function parseHistory(json) {
+  parseHistory(json) {
     return new Promise((resolve, reject) => {
       if (!json.pipelines || !json.pipelines.length){
         throw new Error('No pipelines available');
       }
 
       const pipeline = json.pipelines.shift();
-      return findStage(pipeline.stages, options.stage)
-        .then(stage => {
-          resolve(extend(options, {
-            pipelineLabel: pipeline.label,
-            stageCounter: stage.counter,
-            stage: stage.name,
-            jobName: stage.jobs[0].name
-          }));
-        });
+
+      return this.findStage(pipeline.stages, this.stage)
+        .then(stage => resolve({
+          pipeline: pipeline.name,
+          pipelineLabel: pipeline.label,
+          stage: stage.name,
+          stageCounter: stage.counter,
+          jobName: stage.jobs[0].name
+        }));
     });
   }
 
-  function log(options) {
+  log({ pipeline, pipelineLabel, stage, stageCounter, jobName }) {
     const url = [
       'files',
-      options.pipeline,
-      options.pipelineLabel,
-      options.stage,
-      options.stageCounter,
-      options.jobName,
+      pipeline,
+      pipelineLabel,
+      stage,
+      stageCounter,
+      jobName,
       'cruise-output',
       'console.log'
     ].join('/');
 
-    return request({
-      url,
-      qs: {
-        ms: `${Date.now()}_2`,
-        startLineNumber: options.startLineNumber
-      }
-    }).then(handleLog);
-  }
-
-  function handleLog(body) {
-    process.stdout.write(body);
-    options.startLineNumber += getNumberOfLines(body);
-    setTimeout(() => log(options), options.interval);
-  }
-
-  function findStage(stages, stageName) {
-    if (!Array.isArray(stages)) {
-      throw new Error('Expected Array got something else');
+    const qs = {
+      ms: `${Date.now()}_2`,
+      startLineNumber: this.startLineNumber
     }
+    setTimeout(() => this.log(arguments[0]), this.interval);
+    return this.request({ url, qs }).then(body => this.handleLog(body));
+  }
 
+  handleLog(body) {
+    process.stdout.write(body);
+    this.startLineNumber += countNumberOfLines(body);
+  }
+
+  findStage(stages, stageName) {
     return new Promise((resolve, reject) => {
       if (stageName) {
         const stage = find(stages, { name: stageName });
@@ -101,13 +96,9 @@ module.exports = (options) => {
         return resolve(stages[0]);
       }
 
-      return inquire('stage', map(stages, 'name')).then(stageName => stages[stageName]);
+      return this.inquire('stage', map(stages, 'name')).then(stageName => stages[stageName]);
     });
   }
-
-  function getNumberOfLines(str) {
-    str = String(str).trim();
-    return str.length ? str.split(/\r\n|\r|\n/).length : 0;
-  }
 }
+
 

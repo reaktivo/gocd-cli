@@ -22,7 +22,8 @@ program
   .description('Show logs for pipeline')
   .option('--startLineNumber <int>', 'Start line number', 0)
   .action(() => {
-    require('../commands/logs')(program);
+    const Logs = require('../commands/logs');
+    new Logs(program);
   });
 
 program
