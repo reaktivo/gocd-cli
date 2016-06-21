@@ -8,16 +8,19 @@ module.exports = (options) => {
   const find = lodash.find;
   const map = lodash.map;
 
-  options.startLineNumber = parseInt(options.startLineNumber || 0, 10);
-  options.interval = parseInt(options.interval || 1000, 10);
-
   run();
 
   function run() {
+    normalizeOptions();
     loadHistory()
       .then(parseHistory)
       .then(log)
       .catch(err => { throw new Error(err) });
+  }
+
+  function normalizeOptions() {
+    options.startLineNumber = parseInt(options.startLineNumber || 0, 10);
+    options.interval = parseInt(options.interval || 1000, 10);
   }
 
   function loadHistory() {
