@@ -30,7 +30,7 @@ program
   .description('Get status of pipeline')
   .action(() => {
     program.command = 'status';
-    run(program);
+    require('../commands/status')(program)
   });
 
 program.parse(process.argv);

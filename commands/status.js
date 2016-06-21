@@ -1,14 +1,20 @@
-module.exports = options => {
-
-  const _ = require('lodash');
+module.exports = (options) => {
+  const { mapValues, capitalize } = require('lodash');
   const chalk = require('chalk');
 
-  const request = require('../lib/request')(options);
+  const { request } = require('../lib/request')(options);
+
+  run();
+
+  function run() {
+    loadStatus()
+      .then(handleStatusLoad);
+  }
 
   function loadStatus() {
-    request({
+    return request({
       url: `/api/pipelines/${options.pipeline}/status`
-    }, handleStatusLoad);
+    }).then(body => JSON.parse(body));
   }
 
   function mapBoolean(val) {
@@ -18,19 +24,9 @@ module.exports = options => {
     return val;
   }
 
-  function handleStatusLoad(err, response, body) {
-    if (err) throw new Error(err);
-    if (response) {
-      if (response.statusCode === 404) {
-        throw new Error(`Status for pipeline ${options.pipeline} not found: 404`);
-      } else if (response.statusCode !== 200) {
-        throw new Error('Unexpected http error');
-      }
-    }
-
-    const json = JSON.parse(body);
-    const logs = _.mapValues(json, (value, key) => {
-      return `${chalk.bold(_.capitalize(key))}: ${mapBoolean(value)}`;
+  function handleStatusLoad(json) {
+    const logs = mapValues(json, (value, key) => {
+      return `${capitalize(key)}: ${chalk.bold(mapBoolean(value))}`;
     });
     console.log('');
     console.log(chalk.bold.underline.cyan('Status for', options.pipeline));
@@ -43,5 +39,4 @@ module.exports = options => {
     }
   }
 
-  loadStatus();
 }
