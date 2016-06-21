@@ -48,15 +48,13 @@ module.exports = (options) => {
   }
 
   function log(options) {
-    // files/Les.Miserables/92/build/1/build/cruise-output/console.log
-    // files/Les.Miserables/94//1/build/cruise-output/console.log
     const url = [
       'files',
-      options.pipeline, // Les.Miserables
-      options.pipelineLabel, // 92
-      options.stage, // build
-      options.stageCounter, // 1
-      options.jobName, // build
+      options.pipeline,
+      options.pipelineLabel,
+      options.stage,
+      options.stageCounter,
+      options.jobName,
       'cruise-output',
       'console.log'
     ].join('/');
