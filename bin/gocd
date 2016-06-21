@@ -1,0 +1,46 @@
+#!/usr/bin/env node --harmony
+
+const chalk = require('chalk');
+const traceable = require('traceable');
+
+const program = require('commander');
+
+const run = require('..');
+
+process.on('uncaughtException', handleUncaughtException);
+process.on('unhandledRejection', handleUncaughtException);
+
+program
+  .version(require('../package.json').version)
+  .option('-e, --endpoint <string>', 'Server host, e.g. https://frontend-gocd.travix.com/go')
+  .option('-p, --pipeline <name>', 'Pipeline name')
+  .option('--session <id>', 'Your session id')
+  .option('-s, --stage <name>', 'Stage name')
+
+program
+  .command('logs')
+  .description('Show logs for pipeline')
+  .option('--startLineNumber <int>', 'Start line number', 0)
+  .action(() => {
+    require('../commands/logs')(program);
+  });
+
+program
+  .command('status')
+  .description('Get status of pipeline')
+  .action(() => {
+    program.command = 'status';
+    run(program);
+  });
+
+program.parse(process.argv);
+
+function handleUncaughtException(err) {
+  console.log(chalk.red(err.message));
+  console.log(traceable(err, {
+    showFullPath: true,
+    indent: 2,
+    blackbox: ['module.js', 'node.js']
+  }).toString());
+  process.exit(1);
+}
