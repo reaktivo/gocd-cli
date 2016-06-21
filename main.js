@@ -1,22 +1,21 @@
 'use strict';
 module.exports = function(options) {
 
+/* TODO: Refactor into lib file, rename also */
   const inquirer = require('inquirer');
   const url = require('url');
   const chalk = require('chalk');
-  const handle = require('./lib/handleJsonApiResponse');
   const lodash = require('lodash');
   const map = lodash.map;
   const find = lodash.find;
   const extend = lodash.extend;
   const flatten = lodash.flatten;
 
-  const request = require('./lib/request')(options)
+  const { request } = require('./lib/request')(options)
 
   return {
 
     inquire: function inquire(options, key, choices) {
-      console.log(`inquire ${key}`);
       if (choices.length === 0) {
         throw new Error(`No options available for ${key}`);
       }
@@ -39,25 +38,21 @@ module.exports = function(options) {
     },
 
     data: function data(options) {
-      return new Promise((resolve, reject) => {
-        request({
-          url: '/api/config/pipeline_groups'
-        }, handle(data => {
-          resolve(extend({}, options, { data }));
-        }));
-      });
+       return request({ url: '/api/config/pipeline_groups' })
+        .then(body => JSON.parse(body))
+        .then(groups => extend({}, options, { groups }));
     },
 
     group: function group(options) {
       return this.data(options).then(options => {
-        const groupChoices = map(options.data, 'name');
+        const groupChoices = map(options.groups, 'name');
         return this.inquire(options, 'group', groupChoices);
       });
     },
 
     pipeline: function pipeline(options) {
       return this.group(options).then(options => {
-        group = find(groups, { name: options.group });
+        const group = find(options.groups, { name: options.group });
         const pipelineChoices = map(group.pipelines, 'name');
         return this.inquire(options, 'pipeline', pipelineChoices);
       });

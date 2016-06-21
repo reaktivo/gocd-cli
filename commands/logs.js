@@ -1,6 +1,7 @@
 module.exports = (options) => {
-  const inquire = require('../lib/inquire')(options);
+  const { inquire } = require('../lib/inquire')(options);
   const { request } = require('../lib/request')(options);
+  const requireOptions = require('../lib/requireOptions');
   const lodash = require('lodash');
   const chalk = require('chalk');
   const pretty = require('pretty-js');
@@ -8,22 +9,25 @@ module.exports = (options) => {
   const find = lodash.find;
   const map = lodash.map;
 
-  run();
+  run(options);
 
-  function run() {
-    normalizeOptions();
-    loadHistory()
+  function run(options) {
+    normalizeOptions(options)
+      .then(requireOptions(['pipeline']))
+      .then(loadHistory)
       .then(parseHistory)
       .then(log)
-      .catch(err => { throw new Error(err) });
+      .catch(err => { console.log(err.stack); throw new Error(err) });
   }
 
-  function normalizeOptions() {
+  function normalizeOptions(options) {
     options.startLineNumber = parseInt(options.startLineNumber || 0, 10);
     options.interval = parseInt(options.interval || 1000, 10);
+
+    return Promise.resolve(options);
   }
 
-  function loadHistory() {
+  function loadHistory(options) {
     return request(`/api/pipelines/${options.pipeline}/history`)
       .then(body => JSON.parse(body));
   }
