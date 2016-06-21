@@ -2,7 +2,8 @@ module.exports = (options) => {
   const { mapValues, capitalize } = require('lodash');
   const chalk = require('chalk');
 
-  const { request } = require('../lib/request')(options);
+  const Request = require('../lib/request');
+  const request = new Request(options);
 
   run();
 

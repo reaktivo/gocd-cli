@@ -1,7 +1,7 @@
 const { extend, find, map } = require('lodash');
 const { countNumberOfLines } = require('../helpers/string');
+const { inquire } = require('../lib/inquire');
 const Request = require('../lib/request');
-const Inquire = require('../lib/inquire');
 const requireOptions = require('../lib/requireOptions');
 const chalk = require('chalk');
 const pretty = require('pretty-js');
@@ -9,8 +9,7 @@ const pretty = require('pretty-js');
 module.exports = class Logs {
 
   constructor(options) {
-    this.request = Request(options).request;
-    this.inquire = Inquire(options);
+    this.request = new Request(options);
     this.normalizeOptions(options)
       .then(requireOptions(['pipeline']))
       .then(this.loadHistory.bind(this))
@@ -29,7 +28,7 @@ module.exports = class Logs {
 
   loadHistory(options) {
     const pipeline = options.pipeline;
-    return this.request(`/api/pipelines/${pipeline}/history`)
+    return this.request.get(`/api/pipelines/${pipeline}/history`)
       .then(body => JSON.parse(body));
   }
 
@@ -69,7 +68,7 @@ module.exports = class Logs {
       startLineNumber: this.startLineNumber
     }
     setTimeout(() => this.log(arguments[0]), this.interval);
-    return this.request({ url, qs }).then(body => this.handleLog(body));
+    return this.request.get({ url, qs }).then(body => this.handleLog(body));
   }
 
   handleLog(body) {
@@ -96,7 +95,7 @@ module.exports = class Logs {
         return resolve(stages[0]);
       }
 
-      return this.inquire('stage', map(stages, 'name')).then(stageName => stages[stageName]);
+      return inquire('stage', map(stages, 'name')).then(stageName => stages[stageName]);
     });
   }
 }

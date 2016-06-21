@@ -10,8 +10,8 @@ module.exports = function(options) {
   const find = lodash.find;
   const extend = lodash.extend;
   const flatten = lodash.flatten;
-
-  const { request } = require('./lib/request')(options)
+  const Request = require('./lib/request');
+  const request = new Request(options);
 
   return {
 
@@ -38,7 +38,7 @@ module.exports = function(options) {
     },
 
     data: function data(options) {
-       return request({ url: '/api/config/pipeline_groups' })
+       return request.get({ url: '/api/config/pipeline_groups' })
         .then(body => JSON.parse(body))
         .then(groups => extend({}, options, { groups }));
     },
