@@ -29,6 +29,7 @@ module.exports = (options) => {
     const logs = mapValues(json, (value, key) => {
       return `${capitalize(key)}: ${chalk.bold(mapBoolean(value))}`;
     });
+
     console.log('');
     console.log(chalk.bold.underline.cyan('Status for', options.pipeline));
     console.log(logs.schedulable);

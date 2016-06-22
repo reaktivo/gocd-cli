@@ -1,5 +1,5 @@
 const { extend, find, map } = require('lodash');
-const { countNumberOfLines } = require('../helpers/string');
+const { countNumberOfLines, toBool } = require('../helpers/string');
 const { inquire } = require('../lib/inquire');
 const Request = require('../lib/request');
 const requireOptions = require('../lib/requireOptions');
@@ -10,11 +10,15 @@ module.exports = class Logs {
 
   constructor(options) {
     this.request = new Request(options);
+    this.inquire = inquire;
     this.normalizeOptions(options)
       .then(requireOptions(['pipeline']))
       .then(this.loadHistory.bind(this))
       .then(this.parseHistory.bind(this))
-      .then(this.log.bind(this))
+      .then(options => {
+        this.pollJobStatus(options);
+        this.log(options);
+      })
       .catch(err => { console.log(err.stack); throw new Error(err) });
   }
 
@@ -32,13 +36,13 @@ module.exports = class Logs {
       .then(body => JSON.parse(body));
   }
 
-  parseHistory(json) {
+  parseHistory({ pipelines }) {
     return new Promise((resolve, reject) => {
-      if (!json.pipelines || !json.pipelines.length){
+      if (!pipelines || !pipelines.length){
         throw new Error('No pipelines available');
       }
 
-      const pipeline = json.pipelines.shift();
+      const pipeline = pipelines[0];
 
       return this.findStage(pipeline.stages, this.stage)
         .then(stage => resolve({
@@ -46,9 +50,39 @@ module.exports = class Logs {
           pipelineLabel: pipeline.label,
           stage: stage.name,
           stageCounter: stage.counter,
-          jobName: stage.jobs[0].name
+          jobName: stage.jobs[0].name,
+          jobId: stage.jobs[0].id
         }));
     });
+  }
+
+  pollJobStatus({ pipeline, stage, jobId }) {
+    this.request.get({
+      url: 'jobStatus.json',
+      qs: {
+        pipelineName: pipeline,
+        stageName: stage,
+        jobId: jobId
+      }
+    })
+    .then(data => JSON.parse(data))
+    .then(data => this.jobStatus = data[0].building_info);
+
+    this.jobStatusPoller = setTimeout(() => this.pollJobStatus(arguments[0]), this.interval);
+  }
+
+  checkJobStatus() {
+    const { is_completed, result } = this.jobStatus;
+    const isSuccess = (result === 'Passed')
+    const decorator =  isSuccess ? chalk.bold.green : chalk.bold.red;
+
+    if (toBool(is_completed)) {
+      clearTimeout(this.logPoller);
+      clearTimeout(this.jobStatusPoller);
+      console.log(chalk.bold.underline.cyan('\nJob status'));
+      console.log(`Result: ${decorator(result)}\n`);
+      isSuccess || process.exit(-1);
+    }
   }
 
   log({ pipeline, pipelineLabel, stage, stageCounter, jobName }) {
@@ -67,13 +101,19 @@ module.exports = class Logs {
       ms: `${Date.now()}_2`,
       startLineNumber: this.startLineNumber
     }
-    setTimeout(() => this.log(arguments[0]), this.interval);
+
+    this.logPoller = setTimeout(() => this.log(arguments[0]), this.interval);
     return this.request.get({ url, qs }).then(body => this.handleLog(body));
   }
 
   handleLog(body) {
-    process.stdout.write(body);
+    this._stdoutWrite(body);
     this.startLineNumber += countNumberOfLines(body);
+    this.checkJobStatus();
+  }
+
+  _stdoutWrite(str) {
+    process.stdout.write(str);
   }
 
   findStage(stages, stageName) {
@@ -95,7 +135,8 @@ module.exports = class Logs {
         return resolve(stages[0]);
       }
 
-      return inquire('stage', map(stages, 'name')).then(stageName => stages[stageName]);
+      return this.inquire('stage', map(stages, 'name'))
+        .then(stageName => this.findStage(stages, stageName));
     });
   }
 }
