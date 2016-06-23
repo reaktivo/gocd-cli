@@ -34,6 +34,14 @@ program
     require('../commands/status')(program)
   });
 
+program
+  .command('schedule')
+  .description('Schedule a job in a pipeline')
+  .action(() => {
+    const Schedule = require('../commands/schedule');
+    new Schedule(program);
+  });
+
 program.parse(process.argv);
 
 function handleUncaughtException(err) {
