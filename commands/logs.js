@@ -9,7 +9,7 @@ const pretty = require('pretty-js');
 module.exports = class Logs {
 
   constructor(options) {
-    this.request = new Request(options);
+    this.request = Request(options);
     this.inquire = inquire;
     this.normalizeOptions(options)
       .then(requireOptions(['pipeline']))
@@ -32,7 +32,7 @@ module.exports = class Logs {
 
   loadHistory(options) {
     const pipeline = options.pipeline;
-    return this.request.get(`/api/pipelines/${pipeline}/history`)
+    return this.request(`/api/pipelines/${pipeline}/history`)
       .then(body => JSON.parse(body));
   }
 
@@ -57,7 +57,7 @@ module.exports = class Logs {
   }
 
   pollJobStatus({ pipeline, stage, jobId }) {
-    this.request.get({
+    this.request({
       url: 'jobStatus.json',
       qs: {
         pipelineName: pipeline,
@@ -103,7 +103,7 @@ module.exports = class Logs {
     }
 
     this.logPoller = setTimeout(() => this.log(arguments[0]), this.interval);
-    return this.request.get({ url, qs }).then(body => this.handleLog(body));
+    return this.request({ url, qs }).then(body => this.handleLog(body));
   }
 
   handleLog(body) {

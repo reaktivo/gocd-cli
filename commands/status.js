@@ -3,7 +3,7 @@ module.exports = (options) => {
   const chalk = require('chalk');
 
   const Request = require('../lib/request');
-  const request = new Request(options);
+  const request = Request(options);
 
   run();
 
