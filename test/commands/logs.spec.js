@@ -35,13 +35,11 @@ describe('Logs', () => {
 
     it('should request url with pipeline option', (done) => {
       const stub = {
-        request: {
-          get: sinon.stub().returns(Promise.resolve("{\"a\":1}"))
-        }
+        request: sinon.stub().returns(Promise.resolve("{\"a\":1}"))
       };
       const options = { pipeline: 'PIPELINE' };
       const result = Logs.prototype.loadHistory.call(stub, options);
-      expect(stub.request.get).to.have.been.calledWith('/api/pipelines/PIPELINE/history');
+      expect(stub.request).to.have.been.calledWith('/api/pipelines/PIPELINE/history');
       expect(result).to.eventually.deep.equal({a:1}).notify(done);
     });
 
@@ -105,9 +103,7 @@ describe('Logs', () => {
       const stub = {
         startLineNumber: 0,
         handleLog: sinon.stub(),
-        request: {
-          get: sinon.stub().returns(Promise.resolve('x'))
-        }
+        request: sinon.stub().returns(Promise.resolve('x'))
       };
 
       const options = {
@@ -119,7 +115,7 @@ describe('Logs', () => {
       };
 
       Logs.prototype.log.call(stub, options);
-      expect(stub.request.get).to.have.been.calledWith({
+      expect(stub.request).to.have.been.calledWith({
         url: 'files/a/b/c/d/e/cruise-output/console.log',
         qs: {
           ms: `${now}_2`,
@@ -133,9 +129,7 @@ describe('Logs', () => {
       const stub = {
         startLineNumber: 0,
         handleLog: sinon.stub(),
-        request: {
-          get: sinon.stub().returns(Promise.resolve('x'))
-        }
+        request: sinon.stub().returns(Promise.resolve('x'))
       };
       const options = {};
       Logs.prototype.log.call(stub, options).then(() => {
