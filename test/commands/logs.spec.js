@@ -1,4 +1,3 @@
-require('../setup')
 const Logs = require('../../commands/logs');
 
 describe('Logs', () => {

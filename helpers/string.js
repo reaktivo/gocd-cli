@@ -5,6 +5,17 @@ module.exports = {
     return str.length ? str.split(/\r\n|\r|\n/).length : 0;
   },
 
+  parseEnv(str) {
+    return str && String(str).split(' ')
+      .filter(Boolean)
+      .map(str => str.split('='))
+      .reduce((obj, [key, value]) => {
+        obj[`variables[${key}]`] = value;
+        return obj;
+      },
+      {});
+  },
+
   parseSessionId: function parseSessionId(sessionStr) {
     return sessionStr
       .split("JSESSIONID=")
