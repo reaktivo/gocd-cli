@@ -10,10 +10,11 @@ module.exports = function(options) {
   const find = lodash.find;
   const extend = lodash.extend;
   const flatten = lodash.flatten;
-  const Request = require('./lib/request');
-  const request = Request(options);
+  const request = require('./lib/request')(options);
 
   return {
+
+    request: request,
 
     inquire: function inquire(options, key, choices) {
       if (choices.length === 0) {
@@ -37,9 +38,33 @@ module.exports = function(options) {
       }]).then(answers => extend({}, options, answers));
     },
 
+    secret: function secret(options, key) {
+      if (options[key]) {
+        return Promise.resolve(options[key]);
+      }
+
+      return inquirer.prompt([{
+        type: 'password',
+        name: key,
+        message: `Please specify secret ${key} value`
+      }]).then(answers => extend({}, options, answers));
+    },
+
+    text: function text(options, key) {
+      if (options[key]) {
+        return Promise.resolve(options[key]);
+      }
+
+      return inquirer.prompt([{
+        type: 'input',
+        name: key,
+        message: `Please specify ${key}`
+      }]).then(answers => extend({}, options, answers));
+    },
+
     data: function data(options) {
        return request({ url: '/api/config/pipeline_groups' })
-        .then(body => JSON.parse(body))
+        .then(({ body }) => JSON.parse(body))
         .then(groups => extend({}, options, { groups }));
     },
 
@@ -64,6 +89,14 @@ module.exports = function(options) {
         const stageChoices = map(pipeline.stages, 'name');
         return this.inquire(options, 'stage', stageChoices);
       });
+    },
+
+    endpoint: function endpoint(options) {
+      return this.text(options, 'endpoint');
+    },
+
+    session: function session(options) {
+      return this.secret(options, 'session');
     }
   }
 }

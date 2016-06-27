@@ -2,24 +2,33 @@ const { extend, find, map } = require('lodash');
 const { countNumberOfLines, toBool } = require('../helpers/string');
 const { inquire } = require('../lib/inquire');
 const Request = require('../lib/request');
-const requireOptions = require('../lib/requireOptions');
+const requireOption = require('../lib/requireOption');
 const chalk = require('chalk');
 const pretty = require('pretty-js');
+const stdout = require('../helpers/stdout');
 
-module.exports = class Logs {
+class Logs {
 
   constructor(options) {
-    this.request = Request(options);
+    this.write = stdout.write;
     this.inquire = inquire;
-    this.normalizeOptions(options)
-      .then(requireOptions(['pipeline']))
+    this.request = Request(options);
+    this.requireOption = requireOption;
+    this.run(options);
+  }
+
+  run(options) {
+    return Promise.resolve(options)
+      .then(this.normalizeOptions.bind(this))
+      // .then(this.requireOption('endpoint'))
+      // .then(this.requireOption('session'))
+      .then(this.requireOption('pipeline'))
       .then(this.loadHistory.bind(this))
       .then(this.parseHistory.bind(this))
       .then(options => {
         this.pollJobStatus(options);
         this.log(options);
-      })
-      .catch(err => { console.log(err.stack); throw new Error(err) });
+      });
   }
 
   normalizeOptions(options) {
@@ -33,7 +42,7 @@ module.exports = class Logs {
   loadHistory(options) {
     const pipeline = options.pipeline;
     return this.request(`/api/pipelines/${pipeline}/history`)
-      .then(body => JSON.parse(body));
+      .then(({ body }) => JSON.parse(body));
   }
 
   parseHistory({ pipelines }) {
@@ -65,7 +74,7 @@ module.exports = class Logs {
         jobId: jobId
       }
     })
-    .then(data => JSON.parse(data))
+    .then(({ body }) => JSON.parse(body))
     .then(data => this.jobStatus = data[0].building_info);
 
     this.jobStatusPoller = setTimeout(() => this.pollJobStatus(arguments[0]), this.interval);
@@ -74,14 +83,14 @@ module.exports = class Logs {
   checkJobStatus() {
     const { is_completed, result } = this.jobStatus;
     const isSuccess = (result === 'Passed')
-    const decorator =  isSuccess ? chalk.bold.green : chalk.bold.red;
+    const colorize =  isSuccess ? chalk.bold.green : chalk.bold.red;
 
     if (toBool(is_completed)) {
       clearTimeout(this.logPoller);
       clearTimeout(this.jobStatusPoller);
-      console.log(chalk.bold.underline.cyan('\nJob status'));
-      console.log(`Result: ${decorator(result)}\n`);
-      isSuccess || process.exit(-1);
+      this.write(chalk.bold.underline.cyan('\nJob status'));
+      this.write(`Result: ${colorize(result)}\n`);
+      isSuccess || this._exit(1);
     }
   }
 
@@ -103,17 +112,13 @@ module.exports = class Logs {
     }
 
     this.logPoller = setTimeout(() => this.log(arguments[0]), this.interval);
-    return this.request({ url, qs }).then(body => this.handleLog(body));
+    return this.request({ url, qs }).then(({ body }) => this.handleLog(body));
   }
 
   handleLog(body) {
-    this._stdoutWrite(body);
+    this.write(body);
     this.startLineNumber += countNumberOfLines(body);
     this.checkJobStatus();
-  }
-
-  _stdoutWrite(str) {
-    process.stdout.write(str);
   }
 
   findStage(stages, stageName) {
@@ -136,9 +141,13 @@ module.exports = class Logs {
       }
 
       return this.inquire('stage', map(stages, 'name'))
-        .then(stageName => this.findStage(stages, stageName));
+        .then(stageName => resolve(this.findStage(stages, stageName)));
     });
+  }
+
+  _exit(code) {
+    process.exit(code);
   }
 }
 
-
+module.exports = Logs;

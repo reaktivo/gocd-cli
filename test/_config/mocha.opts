@@ -1,6 +1,6 @@
 --colors
 --reporter spec
---timeout 5000
+--timeout 2000
 --globals __base,config,document,window,navigator
 --recursive
 --require ./test/_config/setup.js

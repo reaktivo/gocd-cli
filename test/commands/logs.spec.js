@@ -1,6 +1,64 @@
 const Logs = require('../../commands/logs');
+let sandbox;
 
 describe('Logs', () => {
+
+  beforeEach(() => {
+    sandbox = sinon.sandbox.create();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  describe('#constructor', () => {
+
+    it('should setup main options', () => {
+      sandbox.stub(Logs.prototype, 'run');
+      const options = {
+        endpoint: '',
+        session: ''
+      };
+      const logs = new Logs(options);
+      expect(logs.inquire).to.be.a('function');
+      expect(logs.request).to.be.a('function');
+      expect(logs.requireOptions).to.be.a('function');
+    });
+
+    it('should call run with options', () => {
+      const stub = sandbox.stub(Logs.prototype, 'run');
+      const options = {
+        endpoint: '',
+        session: ''
+      };
+      const logs = new Logs(options);
+      expect(stub).to.have.been.calledWith(options);
+    });
+
+  });
+
+  describe('#run', () => {
+
+    it('should eventually call log', (done) => {
+      const options = {
+        endpoint: '',
+        pipeline: '',
+        session: ''
+      };
+      const stub = {
+        requireOptions: (opts) => Promise.resolve(opts),
+        normalizeOptions: (opts) => Promise.resolve(opts),
+        loadHistory: (opts) => Promise.resolve(opts),
+        parseHistory: (opts) => Promise.resolve(opts),
+        pollJobStatus: (opts) => Promise.resolve(opts),
+        log: (opts) => Promise.resolve(opts)
+      }
+      const result = Logs.prototype.run.call(stub, options);
+      expect(result).to.eventually.be.fulfilled.notify(done);
+
+    });
+
+  });
 
   describe('#normalizeOptions', () => {
 
@@ -34,7 +92,7 @@ describe('Logs', () => {
 
     it('should request url with pipeline option', (done) => {
       const stub = {
-        request: sinon.stub().returns(Promise.resolve("{\"a\":1}"))
+        request: sinon.stub().returns(Promise.resolve({ body: "{\"a\":1}" }))
       };
       const options = { pipeline: 'PIPELINE' };
       const result = Logs.prototype.loadHistory.call(stub, options);
@@ -84,6 +142,48 @@ describe('Logs', () => {
 
   });
 
+  describe('#checkJobStatus', () => {
+
+    it('should write status when job is finished', () => {
+      const stub = {
+        jobStatus: {
+          is_completed: 'true',
+          result: 'Passed'
+        },
+        write: sinon.stub(),
+        _exit: sinon.stub()
+      }
+      Logs.prototype.checkJobStatus.call(stub);
+      expect(stub.write).to.have.been.called;
+    });
+
+    it('should not write status when job is not finished', () => {
+      const stub = {
+        jobStatus: {
+          is_completed: 'false',
+          result: 'Unknown'
+        },
+        write: sinon.stub(),
+        _exit: sinon.stub()
+      }
+      Logs.prototype.checkJobStatus.call(stub);
+      expect(stub.write).to.not.have.been.called;
+    });
+
+    it('should exit program with error status code when job did not succeed', () => {
+      const stub = {
+        jobStatus: {
+          is_completed: 'true',
+          result: 'Failed'
+        },
+        write: sinon.stub(),
+        _exit: sinon.stub()
+      }
+      Logs.prototype.checkJobStatus.call(stub);
+      expect(stub._exit).to.have.been.calledWith(1);
+    });
+  });
+
   describe('#log', () => {
 
     let clock;
@@ -102,7 +202,7 @@ describe('Logs', () => {
       const stub = {
         startLineNumber: 0,
         handleLog: sinon.stub(),
-        request: sinon.stub().returns(Promise.resolve('x'))
+        request: sinon.stub().returns(Promise.resolve({ body: 'x' }))
       };
 
       const options = {
@@ -128,7 +228,7 @@ describe('Logs', () => {
       const stub = {
         startLineNumber: 0,
         handleLog: sinon.stub(),
-        request: sinon.stub().returns(Promise.resolve('x'))
+        request: sinon.stub().returns(Promise.resolve({ body: 'x' }))
       };
       const options = {};
       Logs.prototype.log.call(stub, options).then(() => {
@@ -143,18 +243,18 @@ describe('Logs', () => {
 
     it('should write text to stdout', () => {
       const stub = {
-        _stdoutWrite: sinon.stub(),
+        write: sinon.stub(),
         checkJobStatus: sinon.stub(),
         startLineNumber: 0
       }
 
       const result = Logs.prototype.handleLog.call(stub, 'xxx');
-      expect(stub._stdoutWrite).to.have.been.calledWith('xxx');
+      expect(stub.write).to.have.been.calledWith('xxx');
     });
 
     it('should update startLineNumber based on passed data', () => {
       const stub = {
-        _stdoutWrite: sinon.stub(),
+        write: sinon.stub(),
         checkJobStatus: sinon.stub(),
         startLineNumber: 0
       }
@@ -165,7 +265,7 @@ describe('Logs', () => {
 
     it('should check job status after writing to stdout', () => {
       const stub = {
-        _stdoutWrite: sinon.stub(),
+        write: sinon.stub(),
         checkJobStatus: sinon.stub(),
         startLineNumber: 0
       }
@@ -217,12 +317,14 @@ describe('Logs', () => {
       expect(stub.inquire).to.have.been.calledOnce;
     });
 
-    xit('should inquire and resolve with user selected stage', (done) => {
-      sinon.stub(Logs.prototype, 'inquire', Promise.resolve('MY_STAGE'));
-      sinon.spy(Logs.prototype, 'findStage');
-
+    it('should inquire and resolve with user selected stage', (done) => {
       const stages = [{name: 'A_STAGE'}, {name: 'MY_STAGE'}];
-      const result = Logs.prototype.findStage.call(stub, stages);
+      const stub = {
+        findStage: Logs.prototype.findStage,
+        inquire: sinon.stub().returns(Promise.resolve('MY_STAGE'))
+      };
+
+      const result = stub.findStage(stages);
       expect(result).to.eventually.deep.equal(stages[1]).notify(done);
     });
 

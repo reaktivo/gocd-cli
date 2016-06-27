@@ -1,44 +1,39 @@
 const Request = require('../lib/request');
-const requireOptions = require('../lib/requireOptions');
+const requireOption = require('../lib/requireOption');
+const StringHelper = require('../helpers/string');
 const chalk = require('chalk');
 
-module.exports = class Logs {
+class Schedule {
 
   constructor(options) {
     this.request = Request(options);
-    requireOptions(['pipeline'])(options)
+    Promise.resolve(options)
+      .then(requireOption('pipeline'))
       .then(this.scheduleJob.bind(this))
       .then(this.handleScheduleJob.bind(this))
       .catch(err => { console.log(err.stack); throw new Error(err) });
   }
 
   scheduleJob(options) {
+    this.pipeline = options.pipeline;
     return this.request({
       method: 'POST',
       uri: `/api/pipelines/${options.pipeline}/schedule`,
-      form: {
-        "variables[GO_STORY]": "CFE-8379-vaycom-the-loading-page-should-",
-        "variables[BRAND_ENV]": "vayama",
-        "variables[API_URL]": "//api.staging.vayama.ie",
-        "variables[COUNTRY_ENV]": "IE",
-        "variables[DEFAULT_LANGUAGE]": "en",
-        "variables[UPSELL_API_URL]": "//upsellapi.cheaptickets.nl"
-      }
+      form: StringHelper.parseEnv(options.env)
     });
   }
 
-  handleScheduleJob(response) {
-    // Should check if response body is successful with:
-    // Request to schedule pipeline Little.Penguin accepted
-
-    console.log(response);
-    if (response.indexOf('Request to schedule pipeline Little.Penguin accepted') < 0) {
-      process.exit('-1');
+  handleScheduleJob({ statusCode, body }) {
+    // statusCode is 409 when failed
+    // statusCode is 202 when successful
+    console.log(body);
+    if (body.indexOf(`Request to schedule pipeline ${this.pipeline} accepted`) < 0) {
+      process.exit(1);
     } else{
       console.log(chalk.green('Success'));
+      // TODO: Run logs with same arguments after success
     }
   }
-
 }
 
-
+module.exports = Schedule;

@@ -1,44 +1,50 @@
-module.exports = (options) => {
-  const { mapValues, capitalize } = require('lodash');
-  const chalk = require('chalk');
+const Request = require('../lib/request');
+const { mapValues, capitalize } = require('lodash');
+const chalk = require('chalk');
+const { humanizeBoolean } = require('../helpers/string');
+const stdout = require('../helpers/stdout');
+const requireOption = require('../lib/requireOption');
 
-  const Request = require('../lib/request');
-  const request = Request(options);
+class Status {
 
-  run();
-
-  function run() {
-    loadStatus()
-      .then(handleStatusLoad);
+  constructor(options) {
+    this.write = stdout.write;
+    this.request = Request(options);
+    this.requireOption = requireOption;
+    this.run(options);
   }
 
-  function loadStatus() {
-    return request({
+  run(options) {
+    Promise.resolve(options)
+      .then(this.requireOption('pipeline'))
+      .then(this.loadStatus.bind(this))
+      .then(this.handleStatusLoad.bind(this));
+  }
+
+  loadStatus(options) {
+    return this.request({
       url: `/api/pipelines/${options.pipeline}/status`
-    }).then(body => JSON.parse(body));
+    }).then(({ body }) => JSON.parse(body));
   }
 
-  function mapBoolean(val) {
-    if (typeof val === 'boolean') {
-      return val ? 'Yes' : 'No';
-    };
-    return val;
-  }
-
-  function handleStatusLoad(json) {
+  handleStatusLoad(json) {
     const logs = mapValues(json, (value, key) => {
-      return `${capitalize(key)}: ${chalk.bold(mapBoolean(value))}`;
+      value = humanizeBoolean(value);
+      return `${capitalize(key)}: ${chalk.bold(value)}`;
     });
 
-    console.log('');
-    console.log(chalk.bold.underline.cyan('Status for', options.pipeline));
-    console.log(logs.schedulable);
-    console.log(logs.locked);
-    console.log(logs.paused);
-    if (json.paused) {
-      console.log(logs.pausedBy);
-      console.log(logs.pausedCause);
-    }
-  }
+    this.write([
+      chalk.bold.underline.cyan('Status'),
+      logs.schedulable,
+      logs.locked,
+      logs.paused,
+    ]);
 
+    json.paused && this.write([
+      logs.pausedBy,
+      logs.pausedCause
+    ]);
+  }
 }
+
+module.exports = Status;

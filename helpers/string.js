@@ -33,5 +33,13 @@ module.exports = {
       }
     }
     return !!value;
+  },
+
+  humanizeBoolean(val) {
+    if (typeof val === 'boolean') {
+      return val ? 'Yes' : 'No';
+    };
+    return val;
   }
+
 }

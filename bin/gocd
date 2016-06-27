@@ -4,11 +4,13 @@ const chalk = require('chalk');
 const traceable = require('traceable');
 
 const program = require('commander');
+const pretty = require('pretty-js');
+const stringify = require('json-stringify-safe');
 
 const run = require('..');
 
-process.on('uncaughtException', handleUncaughtException2);
-process.on('unhandledRejection', handleUncaughtException2);
+process.on('uncaughtException', handleUncaughtException);
+process.on('unhandledRejection', (err) => { throw new Error(err) });
 
 program
   .version(require('../package.json').version)
@@ -30,16 +32,19 @@ program
   .command('status')
   .description('Get status of pipeline')
   .action(() => {
-    program.command = 'status';
-    require('../commands/status')(program)
+    const Status = require('../commands/status');
+    new Status(program)
   });
 
 program
   .command('schedule')
   .description('Schedule a job in a pipeline')
-  .action(() => {
+  .option('--env <vars>', 'Pass in environment variable to use when scheduling pipeline. e.g. "ENV1=value ENV2=value"')
+  .action(opts => {
     const Schedule = require('../commands/schedule');
-    new Schedule(program);
+    new Schedule(Object.assign(program, {
+      env: opts.env
+    }));
   });
 
 program.parse(process.argv);

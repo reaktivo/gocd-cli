@@ -1,30 +1,24 @@
 const Request = require('../../lib/request');
 
-xdescribe('Request', () => {
+describe('Request', () => {
 
-  describe('#constructor', () => {
+  it('should return request method', () => {
+    const options = {
+      session: 'xxxxxxxxxxxxxxxxxxxxxxxxx',
+      endpoint: 'SOME_ENDPOINT',
+    }
 
-    it('should parse session argument from options', () => {
-      const sandbox = sinon.sandbox();
-      const stub = {
-        get: sinon.stub(),
-        parseSessionId: sinon.stub()
-      }
+    const result = Request.call(stub, options);
+    expect(result).to.be.a('function');
+  });
 
-      const options = {
-        session: 'xxxxxxxxxxxxxxxxxxxxxxxxx',
-        endpoint: 'SOME_ENDPOINT'
-      }
+  it('should throw error when session is not specified', () => {
+    const options = {
+      endpoint: 'SOME_ENDPOINT',
+    }
 
-      const result = Request.call(stub, options);
-      expect(stub.parseSessionId).to.have.been.calledWith(options.session);
-    });
-
-    it('should create request property with default values', () => {
-
-
-    });
-
+    const fn = () => Request.call(stub, options);
+    expect(fn).to.throw(Error);
   });
 
 });
