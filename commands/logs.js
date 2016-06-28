@@ -10,7 +10,7 @@ const stdout = require('../helpers/stdout');
 class Logs {
 
   constructor(options) {
-    this.write = stdout.write;
+    this.stdout = stdout;
     this.inquire = inquire;
     this.request = Request(options);
     this.requireOption = requireOption;
@@ -75,12 +75,23 @@ class Logs {
       }
     })
     .then(({ body }) => JSON.parse(body))
-    .then(data => this.jobStatus = data[0].building_info);
+    .then(data => {
+      /**
+       * The idea of keepking more than the last building_info
+       * response is to be able to compare when it changes
+       */
+      this.previousJobStatus = this.jobStatus;
+      this.jobStatus = data[0].building_info;
+    });
 
     this.jobStatusPoller = setTimeout(() => this.pollJobStatus(arguments[0]), this.interval);
   }
 
   checkJobStatus() {
+    if (!this.jobStatus) {
+      return;
+    }
+
     const { is_completed, result } = this.jobStatus;
     const isSuccess = (result === 'Passed')
     const colorize =  isSuccess ? chalk.bold.green : chalk.bold.red;
@@ -88,10 +99,15 @@ class Logs {
     if (toBool(is_completed)) {
       clearTimeout(this.logPoller);
       clearTimeout(this.jobStatusPoller);
-      this.write(chalk.bold.underline.cyan('\nJob status'));
-      this.write(`Result: ${colorize(result)}\n`);
+      this.stdout.write([
+        chalk.bold.underline.cyan('\nJob status'),
+        `Result: ${colorize(result)}`
+      ]);
       isSuccess || this._exit(1);
     }
+
+    // jobStatus.agent_uuid === null when agent has not been assigned
+
   }
 
   log({ pipeline, pipelineLabel, stage, stageCounter, jobName }) {
@@ -111,12 +127,16 @@ class Logs {
       startLineNumber: this.startLineNumber
     }
 
-    this.logPoller = setTimeout(() => this.log(arguments[0]), this.interval);
-    return this.request({ url, qs }).then(({ body }) => this.handleLog(body));
+    return this.request({ url, qs })
+      .then(response => {
+        this.logPoller = setTimeout(() => this.log(arguments[0]), this.interval);
+        return response;
+      })
+      .then(({ body }) => this.handleLog(body));
   }
 
   handleLog(body) {
-    this.write(body);
+    this.stdout.rawWrite(body);
     this.startLineNumber += countNumberOfLines(body);
     this.checkJobStatus();
   }

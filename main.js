@@ -70,6 +70,22 @@ module.exports = function(options) {
 
     group: function group(options) {
       return this.data(options).then(options => {
+        /**
+         * When data for groups, pipelines and stages has been loaded
+         * try to automatically select group based on pipeline passed.
+         *
+         * TODO: Check if two pipelines with same name in different
+         * groups can exists. This would be a problem since currently
+         * we're just looking for the first group that contains a
+         * pipeline with the pipeline name;
+         */
+
+        if (options.pipeline && !options.group) {
+          const group = find(options.groups, group =>
+            find(group.pipelines, { name: options.pipeline })
+          );
+          options.group = group && group.name;
+        }
         const groupChoices = map(options.groups, 'name');
         return this.inquire(options, 'group', groupChoices);
       });

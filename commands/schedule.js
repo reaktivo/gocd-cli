@@ -19,7 +19,10 @@ class Schedule {
     return this.request({
       method: 'POST',
       uri: `/api/pipelines/${options.pipeline}/schedule`,
-      form: StringHelper.parseEnv(options.env)
+      form: StringHelper.parseEnv(options.env),
+      headers: {
+        'Confirm': 'true'
+      }
     });
   }
 

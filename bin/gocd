@@ -16,6 +16,7 @@ program
   .version(require('../package.json').version)
   .option('-e, --endpoint <string>', 'Server host, e.g. https://frontend-gocd.travix.com/go')
   .option('-p, --pipeline <name>', 'Pipeline name')
+  .option('-g, --group <name>', 'Group name')
   .option('--session <id>', 'Your session id')
   .option('-s, --stage <name>', 'Stage name')
 

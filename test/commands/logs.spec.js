@@ -22,7 +22,7 @@ describe('Logs', () => {
       const logs = new Logs(options);
       expect(logs.inquire).to.be.a('function');
       expect(logs.request).to.be.a('function');
-      expect(logs.requireOptions).to.be.a('function');
+      expect(logs.requireOption).to.be.a('function');
     });
 
     it('should call run with options', () => {
@@ -46,7 +46,7 @@ describe('Logs', () => {
         session: ''
       };
       const stub = {
-        requireOptions: (opts) => Promise.resolve(opts),
+        requireOption: (opts) => Promise.resolve(opts),
         normalizeOptions: (opts) => Promise.resolve(opts),
         loadHistory: (opts) => Promise.resolve(opts),
         parseHistory: (opts) => Promise.resolve(opts),
@@ -150,11 +150,14 @@ describe('Logs', () => {
           is_completed: 'true',
           result: 'Passed'
         },
-        write: sinon.stub(),
+        stdout: {
+          write: sinon.stub(),
+          rawWrite: sinon.stub()
+        },
         _exit: sinon.stub()
       }
       Logs.prototype.checkJobStatus.call(stub);
-      expect(stub.write).to.have.been.called;
+      expect(stub.stdout.write).to.have.been.called;
     });
 
     it('should not write status when job is not finished', () => {
@@ -163,11 +166,14 @@ describe('Logs', () => {
           is_completed: 'false',
           result: 'Unknown'
         },
-        write: sinon.stub(),
+        stdout: {
+          write: sinon.stub(),
+          rawWrite: sinon.stub()
+        },
         _exit: sinon.stub()
       }
       Logs.prototype.checkJobStatus.call(stub);
-      expect(stub.write).to.not.have.been.called;
+      expect(stub.stdout.write).to.not.have.been.called;
     });
 
     it('should exit program with error status code when job did not succeed', () => {
@@ -176,7 +182,10 @@ describe('Logs', () => {
           is_completed: 'true',
           result: 'Failed'
         },
-        write: sinon.stub(),
+        stdout: {
+          write: sinon.stub(),
+          rawWrite: sinon.stub()
+        },
         _exit: sinon.stub()
       }
       Logs.prototype.checkJobStatus.call(stub);
@@ -243,18 +252,24 @@ describe('Logs', () => {
 
     it('should write text to stdout', () => {
       const stub = {
-        write: sinon.stub(),
+        stdout: {
+          write: sinon.stub(),
+          rawWrite: sinon.stub()
+        },
         checkJobStatus: sinon.stub(),
         startLineNumber: 0
       }
 
       const result = Logs.prototype.handleLog.call(stub, 'xxx');
-      expect(stub.write).to.have.been.calledWith('xxx');
+      expect(stub.stdout.rawWrite).to.have.been.calledWith('xxx');
     });
 
     it('should update startLineNumber based on passed data', () => {
       const stub = {
-        write: sinon.stub(),
+        stdout: {
+          write: sinon.stub(),
+          rawWrite: sinon.stub()
+        },
         checkJobStatus: sinon.stub(),
         startLineNumber: 0
       }
@@ -265,7 +280,10 @@ describe('Logs', () => {
 
     it('should check job status after writing to stdout', () => {
       const stub = {
-        write: sinon.stub(),
+        stdout: {
+          write: sinon.stub(),
+          rawWrite: sinon.stub()
+        },
         checkJobStatus: sinon.stub(),
         startLineNumber: 0
       }

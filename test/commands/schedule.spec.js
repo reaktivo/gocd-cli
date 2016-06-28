@@ -1,11 +1,11 @@
 const Schedule = require('../../commands/schedule');
 
-xdescribe('Schedule', () => {
+describe('Schedule', () => {
 
-  describe('#parseEnv', () => {
-    it('should save options to instance', () => {
-    });
+  describe('#contructor', () => {
 
-  });
+    it('should return instance of Schedule command');
+
+  })
 
 });
