@@ -2,7 +2,7 @@ const { extend, find, map } = require('lodash');
 const { countNumberOfLines, toBool } = require('../helpers/string');
 const { inquire } = require('../lib/inquire');
 const Request = require('../lib/request');
-const requireOption = require('../lib/requireOption');
+const Options = require('../lib/options');
 const chalk = require('chalk');
 const pretty = require('pretty-js');
 const stdout = require('../helpers/stdout');
@@ -13,16 +13,13 @@ class Logs {
     this.stdout = stdout;
     this.inquire = inquire;
     this.request = Request(options);
-    this.requireOption = requireOption;
     this.run(options);
   }
 
   run(options) {
     return Promise.resolve(options)
       .then(this.normalizeOptions.bind(this))
-      // .then(this.requireOption('endpoint'))
-      // .then(this.requireOption('session'))
-      .then(this.requireOption('pipeline'))
+      .then(options => Options.pipeline(options))
       .then(this.loadHistory.bind(this))
       .then(this.parseHistory.bind(this))
       .then(options => {
@@ -41,11 +38,12 @@ class Logs {
 
   loadHistory(options) {
     const pipeline = options.pipeline;
-    return this.request(`/api/pipelines/${pipeline}/history`)
-      .then(({ body }) => JSON.parse(body));
+    const url = `/api/pipelines/${pipeline}/history`;
+    return this.request({ url, json: true });
   }
 
-  parseHistory({ pipelines }) {
+  parseHistory(response) {
+    const { pipelines } = response.body;
     return new Promise((resolve, reject) => {
       if (!pipelines || !pipelines.length){
         throw new Error('No pipelines available');

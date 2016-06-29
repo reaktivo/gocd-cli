@@ -7,10 +7,10 @@ const program = require('commander');
 const pretty = require('pretty-js');
 const stringify = require('json-stringify-safe');
 
-const run = require('..');
+require('babel-register');
 
 process.on('uncaughtException', handleUncaughtException);
-process.on('unhandledRejection', (err) => { throw new Error(err) });
+process.on('unhandledRejection', handleUncaughtRejection);
 
 program
   .version(require('../package.json').version)
@@ -60,6 +60,10 @@ function handleUncaughtException(err) {
   process.exit(1);
 }
 
-function handleUncaughtException2(err) {
-  throw new Error(err);
+function handleUncaughtRejection(err) {
+  if (err instanceof Error) {
+    throw err;
+  } else {
+    throw new Err(err);
+  }
 }

@@ -3,28 +3,28 @@ const { mapValues, capitalize } = require('lodash');
 const chalk = require('chalk');
 const { humanizeBoolean } = require('../helpers/string');
 const stdout = require('../helpers/stdout');
-const requireOption = require('../lib/requireOption');
+const Options = require('../lib/options');
 
 class Status {
 
   constructor(options) {
     this.write = stdout.write;
     this.request = Request(options);
-    this.requireOption = requireOption;
     this.run(options);
   }
 
   run(options) {
     Promise.resolve(options)
-      .then(this.requireOption('pipeline'))
+      .then(options => Options.pipeline(options))
       .then(this.loadStatus.bind(this))
       .then(this.handleStatusLoad.bind(this));
   }
 
   loadStatus(options) {
     return this.request({
+      json: true,
       url: `/api/pipelines/${options.pipeline}/status`
-    }).then(({ body }) => JSON.parse(body));
+    }).then(response => response.body);
   }
 
   handleStatusLoad(json) {

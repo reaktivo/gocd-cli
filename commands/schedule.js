@@ -1,5 +1,5 @@
 const Request = require('../lib/request');
-const requireOption = require('../lib/requireOption');
+const Options = require('../lib/options');
 const StringHelper = require('../helpers/string');
 const chalk = require('chalk');
 
@@ -8,7 +8,7 @@ class Schedule {
   constructor(options) {
     this.request = Request(options);
     Promise.resolve(options)
-      .then(requireOption('pipeline'))
+      .then(options => Options.pipeline(options))
       .then(this.scheduleJob.bind(this))
       .then(this.handleScheduleJob.bind(this))
       .catch(err => { console.log(err.stack); throw new Error(err) });
