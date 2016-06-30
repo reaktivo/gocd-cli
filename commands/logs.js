@@ -1,27 +1,22 @@
-const { extend, find, map } = require('lodash');
 const { countNumberOfLines, toBool } = require('../helpers/string');
 const { inquire } = require('../lib/inquire');
-const Request = require('../lib/request');
-const Options = require('../lib/options');
 const chalk = require('chalk');
-const pretty = require('pretty-js');
+const Request = require('../lib/request');
+const arg = require('../lib/arg');
 const stdout = require('../helpers/stdout');
+const extend = Object.assign.bind(Object);
 
 class Logs {
 
   constructor(options) {
-    this.stdout = stdout;
-    this.inquire = inquire;
-    this.request = Request(options);
     this.run(options);
   }
 
   run(options) {
     return Promise.resolve(options)
-      .then(this.normalizeOptions.bind(this))
-      .then(options => Options.pipeline(options))
-      .then(this.loadHistory.bind(this))
-      .then(this.parseHistory.bind(this))
+      .then(options => this.normalizeOptions(options))
+      .then(options => arg.pipeline(options))
+      .then(options => this.loadHistory(options))
       .then(options => {
         this.pollJobStatus(options);
         this.log(options);
@@ -37,49 +32,51 @@ class Logs {
   }
 
   loadHistory(options) {
-    const pipeline = options.pipeline;
-    const url = `/api/pipelines/${pipeline}/history`;
-    return this.request({ url, json: true });
+    const url = `/api/pipelines/${options.pipeline}/history`;
+    return Request(options)({ url, json: true })
+      .then(response => this.parseHistory(
+        extend(options, { pipelines: response.body.pipelines })
+      ));
   }
 
-  parseHistory(response) {
-    const { pipelines } = response.body;
-    return new Promise((resolve, reject) => {
-      if (!pipelines || !pipelines.length){
-        throw new Error('No pipelines available');
-      }
+  _findPipeline(pipelines) {
+    if (!pipelines || !pipelines.length){
+      throw new Error('No pipelines available');
+    }
 
-      const pipeline = pipelines[0];
-
-      return this.findStage(pipeline.stages, this.stage)
-        .then(stage => resolve({
-          pipeline: pipeline.name,
-          pipelineLabel: pipeline.label,
-          stage: stage.name,
-          stageCounter: stage.counter,
-          jobName: stage.jobs[0].name,
-          jobId: stage.jobs[0].id
-        }));
-    });
+    return pipelines[0];
   }
 
-  pollJobStatus({ pipeline, stage, jobId }) {
-    this.request({
+  parseHistory(options) {
+    const pipeline = this._findPipeline(options.pipelines);
+    return this.findStage(pipeline.stages, this.stage)
+      .then(stage => extend(options, {
+        pipeline: pipeline.name,
+        pipelineLabel: pipeline.label,
+        stage: stage.name,
+        stageCounter: stage.counter,
+        jobName: stage.jobs[0].name,
+        jobId: stage.jobs[0].id
+      }));
+  }
+
+  pollJobStatus(options) {
+    Request(options)({
+      json: true,
       url: 'jobStatus.json',
       qs: {
-        pipelineName: pipeline,
-        stageName: stage,
-        jobId: jobId
+        pipelineName: options.pipeline,
+        stageName: options.stage,
+        jobId: options.jobId
       }
     })
-    .then(({ body }) => JSON.parse(body))
-    .then(data => {
+    .then(response => {
       /**
        * The idea of keepking more than the last building_info
        * response is to be able to compare when it changes
        */
       this.previousJobStatus = this.jobStatus;
-      this.jobStatus = data[0].building_info;
+      this.jobStatus = response.body[0].building_info;
     });
 
     this.jobStatusPoller = setTimeout(() => this.pollJobStatus(arguments[0]), this.interval);
@@ -97,7 +94,7 @@ class Logs {
     if (toBool(is_completed)) {
       clearTimeout(this.logPoller);
       clearTimeout(this.jobStatusPoller);
-      this.stdout.write([
+      stdout.write([
         chalk.bold.underline.cyan('\nJob status'),
         `Result: ${colorize(result)}`
       ]);
@@ -108,14 +105,14 @@ class Logs {
 
   }
 
-  log({ pipeline, pipelineLabel, stage, stageCounter, jobName }) {
+  log(options) {
     const url = [
       'files',
-      pipeline,
-      pipelineLabel,
-      stage,
-      stageCounter,
-      jobName,
+      options.pipeline,
+      options.pipelineLabel,
+      options.stage,
+      options.stageCounter,
+      options.jobName,
       'cruise-output',
       'console.log'
     ].join('/');
@@ -125,16 +122,16 @@ class Logs {
       startLineNumber: this.startLineNumber
     }
 
-    return this.request({ url, qs })
+    return Request(options)({ url, qs })
       .then(response => {
-        this.logPoller = setTimeout(() => this.log(arguments[0]), this.interval);
+        this.logPoller = setTimeout(() => this.log(options), this.interval);
         return response;
       })
       .then(({ body }) => this.handleLog(body));
   }
 
   handleLog(body) {
-    this.stdout.rawWrite(body);
+    stdout.rawWrite(body);
     this.startLineNumber += countNumberOfLines(body);
     this.checkJobStatus();
   }
@@ -142,7 +139,7 @@ class Logs {
   findStage(stages, stageName) {
     return new Promise((resolve, reject) => {
       if (stageName) {
-        const stage = find(stages, { name: stageName });
+        const stage = stages.find(stage => stage.name === stageName);
         if (!stage) {
           throw new Error(`No stage by that name: ${stageName}`);
         };
@@ -158,8 +155,10 @@ class Logs {
         return resolve(stages[0]);
       }
 
-      return this.inquire('stage', map(stages, 'name'))
-        .then(stageName => resolve(this.findStage(stages, stageName)));
+      return inquire('stage', stages.map(stage => stage.name))
+        .then(stageName => resolve(
+          this.findStage(stages, stageName))
+        );
     });
   }
 

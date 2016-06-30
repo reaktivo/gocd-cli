@@ -1,5 +1,11 @@
-const Logs = require('../../commands/logs');
-let sandbox;
+const proxyquire = require('proxyquire');
+const requestResolveTo = Promise.resolve();
+const Logs = proxyquire('../../commands/logs', {
+  '../lib/arg': { pipeline: sinon.stub() },
+  '../lib/inquire': { inquire: sinon.stub() },
+  '../lib/request': options => requestOptions => requestResolveTo,
+  '../helpers/stdout': { write: sinon.stub(), rawWrite: sinon.stub() },
+});
 
 describe('Logs', () => {
 
@@ -22,7 +28,6 @@ describe('Logs', () => {
       const logs = new Logs(options);
       expect(logs.inquire).to.be.a('function');
       expect(logs.request).to.be.a('function');
-      expect(logs.requireOption).to.be.a('function');
     });
 
     it('should call run with options', () => {

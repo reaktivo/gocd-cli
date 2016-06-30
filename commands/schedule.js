@@ -1,25 +1,25 @@
 const Request = require('../lib/request');
-const Options = require('../lib/options');
+const arg = require('../lib/arg');
 const StringHelper = require('../helpers/string');
 const chalk = require('chalk');
 
 class Schedule {
 
   constructor(options) {
-    this.request = Request(options);
     Promise.resolve(options)
-      .then(options => Options.pipeline(options))
+      .then(options => arg.pipeline(options))
       .then(this.scheduleJob.bind(this))
       .then(this.handleScheduleJob.bind(this))
-      .catch(err => { console.log(err.stack); throw new Error(err) });
+      .catch(err => { cn.log(err.stack); throw new Error(err) });
   }
 
   scheduleJob(options) {
     this.pipeline = options.pipeline;
-    return this.request({
+    const form = StringHelper.parseEnv(options.env);
+    return Request(options)({
       method: 'POST',
       uri: `/api/pipelines/${options.pipeline}/schedule`,
-      form: StringHelper.parseEnv(options.env),
+      form: form,
       headers: {
         'Confirm': 'true'
       }
