@@ -7,7 +7,7 @@ class Schedule {
 
   constructor(options) {
     Promise.resolve(options)
-      .then(options => arg.pipeline(options))
+      .then(options => arg.pipeline(options, { showOnlyScheludable: true }))
       .then(this.scheduleJob.bind(this))
       .then(this.handleScheduleJob.bind(this))
       .catch(err => { cn.log(err.stack); throw new Error(err) });

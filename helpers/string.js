@@ -10,13 +10,17 @@ module.exports = {
       .filter(Boolean)
       .map(str => str.split('='))
       .reduce((obj, [key, value]) => {
-        obj[`variables[${key}]`] = value;
+        obj[`variables[${key}]`] = value || process.env[key];
         return obj;
       },
       {});
   },
 
   parseSessionId: function parseSessionId(sessionStr) {
+    if (typeof sessionStr !== 'string') {
+      throw new Error('Invalid session value');
+    }
+
     return sessionStr
       .split("JSESSIONID=")
       .pop()

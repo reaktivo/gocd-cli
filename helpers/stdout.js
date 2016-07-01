@@ -4,11 +4,11 @@ function rawWrite(body) {
 
 function write(body) {
   if (Array.isArray(body)) {
-    write(body.join('\n') + '\n');
+    write(body.join('\n'));
     return;
   }
 
-  rawWrite(body);
+  rawWrite(body + '\n');
 }
 
 module.exports = {

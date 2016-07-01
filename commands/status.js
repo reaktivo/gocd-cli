@@ -16,17 +16,19 @@ class Status {
     Promise.resolve(options)
       .then(options => arg.pipeline(options))
       .then(options => this.loadStatus(options))
-      .then(options => this.handleStatusLoad(options));
   }
 
   loadStatus(options) {
     return Request(options)({
       json: true,
       url: `/api/pipelines/${options.pipeline}/status`
-    }).then(response => response.body);
+    }).then(response => {
+      this.handleStatusLoad(options, response.body);
+    });
   }
 
-  handleStatusLoad(json) {
+  handleStatusLoad(options, json) {
+
     const logs = mapValues(json, (value, key) => {
       value = humanizeBoolean(value);
       return `${capitalize(key)}: ${chalk.bold(value)}`;
@@ -43,6 +45,12 @@ class Status {
       logs.pausedBy,
       logs.pausedCause
     ]);
+
+    if (!json.paused) {
+     this.write(chalk.bold.underline.cyan('\nSwitching to log mode\n'));
+     const Logs = require('./logs');
+     const logs = new Logs(options);
+    }
   }
 }
 
