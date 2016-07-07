@@ -44,10 +44,18 @@ class Schedule {
   }
 
   switchToLogMode(options) {
+    return Promise.resolve(options);
+    /*
+
+    // Currently there's a bug where when switching to Log view
+    // the pipeline is not available yet to access log
+    // so it actually returns the log of the previous job.
+
     stdout.write('Switching to Log view');
     const Logs = require('../commands/logs');
     options = Object.assign({}, options, { pipelineFilter: null });
     return (new Logs()).run(options);
+    */
   }
 }
 
