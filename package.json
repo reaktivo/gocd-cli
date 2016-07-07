@@ -7,6 +7,9 @@
     "test": "mocha --opts ./test/_config/mocha.opts --",
     "cov": "nyc --reporter=lcov npm test && nyc report"
   },
+  "bin": {
+    "gocd": "bin/gocd"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {

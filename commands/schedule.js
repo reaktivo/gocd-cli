@@ -2,40 +2,52 @@ const Request = require('../lib/request');
 const arg = require('../lib/arg');
 const StringHelper = require('../helpers/string');
 const chalk = require('chalk');
+const stdout = require('../helpers/stdout');
 
 class Schedule {
 
-  constructor(options) {
-    Promise.resolve(options)
-      .then(options => arg.pipeline(options, { showOnlyScheludable: true }))
-      .then(this.scheduleJob.bind(this))
-      .then(this.handleScheduleJob.bind(this))
-      .catch(err => { cn.log(err.stack); throw new Error(err) });
+  run(options) {
+    options.pipelineFilter = 'schedulable';
+    return Promise.resolve(options)
+      .then(options => arg.pipeline(options))
+      .then(options => this.scheduleJob(options))
+      .then(options => this.switchToLogMode(options));
   }
 
   scheduleJob(options) {
-    this.pipeline = options.pipeline;
     const form = StringHelper.parseEnv(options.env);
+
     return Request(options)({
+      simple: false,
       method: 'POST',
       uri: `/api/pipelines/${options.pipeline}/schedule`,
       form: form,
       headers: {
         'Confirm': 'true'
       }
-    });
+    })
+    .then(response => this.handleScheduleJob(response))
+    .then(() => options);
   }
 
-  handleScheduleJob({ statusCode, body }) {
-    // statusCode is 409 when failed
-    // statusCode is 202 when successful
-    console.log(body);
-    if (body.indexOf(`Request to schedule pipeline ${this.pipeline} accepted`) < 0) {
+  handleScheduleJob(response) {
+    const { statusCode, body } = response;
+
+    if (statusCode !== 202) {
+      stdout.write(chalk.red(body || 'Failed to schedule job, probably pipeline is busy'));
       process.exit(1);
-    } else{
-      console.log(chalk.green('Success'));
-      // TODO: Run logs with same arguments after success
+      return;
     }
+
+    stdout.write(chalk.green(body || 'Successfully scheduled job'));
+    return Promise.resolve(response);
+  }
+
+  switchToLogMode(options) {
+    stdout.write('Switching to Log view');
+    const Logs = require('../commands/logs');
+    options = Object.assign({}, options, { pipelineFilter: null });
+    return (new Logs()).run(options);
   }
 }
 

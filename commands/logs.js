@@ -8,10 +8,6 @@ const extend = Object.assign.bind(Object);
 
 class Logs {
 
-  constructor(options) {
-    this.run(options);
-  }
-
   run(options) {
     return Promise.resolve(options)
       .then(options => this.normalizeOptions(options))
@@ -90,7 +86,6 @@ class Logs {
     const { is_completed, result } = this.jobStatus;
     const isSuccess = (result === 'Passed')
     const colorize =  isSuccess ? chalk.bold.green : chalk.bold.red;
-
     if (toBool(is_completed)) {
       clearTimeout(this.logPoller);
       clearTimeout(this.jobStatusPoller);

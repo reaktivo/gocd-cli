@@ -7,13 +7,8 @@ const arg = require('../lib/arg');
 
 class Status {
 
-  constructor(options) {
-    this.write = stdout.write;
-    this.run(options);
-  }
-
   run(options) {
-    Promise.resolve(options)
+    return Promise.resolve(options)
       .then(options => arg.pipeline(options))
       .then(options => this.loadStatus(options))
   }
@@ -22,35 +17,36 @@ class Status {
     return Request(options)({
       json: true,
       url: `/api/pipelines/${options.pipeline}/status`
-    }).then(response => {
-      this.handleStatusLoad(options, response.body);
-    });
+    }).then(response => (
+      this.handleStatusLoad(options, response.body)
+    ));
   }
 
   handleStatusLoad(options, json) {
 
-    const logs = mapValues(json, (value, key) => {
-      value = humanizeBoolean(value);
-      return `${capitalize(key)}: ${chalk.bold(value)}`;
-    });
+    // Use internal flag when we only want to use status info
+    // without printing to stdout.
+    if (!options.internal) {
 
-    this.write([
-      chalk.bold.underline.cyan('Status'),
-      logs.schedulable,
-      logs.locked,
-      logs.paused,
-    ]);
+      const logs = mapValues(json, (value, key) => {
+        value = humanizeBoolean(value);
+        return `${capitalize(key)}: ${chalk.bold(value)}`;
+      });
 
-    json.paused && this.write([
-      logs.pausedBy,
-      logs.pausedCause
-    ]);
+      stdout.write([
+        chalk.bold.underline.cyan('Status'),
+        logs.schedulable,
+        logs.locked,
+        logs.paused,
+      ]);
 
-    if (!json.paused) {
-     this.write(chalk.bold.underline.cyan('\nSwitching to log mode\n'));
-     const Logs = require('./logs');
-     const logs = new Logs(options);
+      json.paused && stdout.write([
+        logs.pausedBy,
+        logs.pausedCause
+      ]);
     }
+
+    return json;
   }
 }
 

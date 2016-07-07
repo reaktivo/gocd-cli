@@ -26,7 +26,7 @@ program
   .option('--startLineNumber <int>', 'Start line number', 0)
   .action(() => {
     const Logs = require('../commands/logs');
-    new Logs(program);
+    (new Logs()).run(program);
   });
 
 program
@@ -34,7 +34,7 @@ program
   .description('Get status of pipeline')
   .action(() => {
     const Status = require('../commands/status');
-    new Status(program)
+    (new Status()).run(program);
   });
 
 program
@@ -43,7 +43,7 @@ program
   .option('--env <vars>', 'Pass in environment variable to use when scheduling pipeline. e.g. "ENV1=value ENV2=value"')
   .action(opts => {
     const Schedule = require('../commands/schedule');
-    new Schedule(Object.assign(program, {
+    (new Schedule()).run(Object.assign(program, {
       env: opts.env
     }));
   });
@@ -51,12 +51,12 @@ program
 program.parse(process.argv);
 
 function handleUncaughtException(err) {
-  console.log(chalk.red(err.message));
-  console.log(traceable(err, {
+  console.log(traceable(err.stack, {
     showFullPath: true,
     indent: 2,
-    blackbox: ['module.js', 'node.js']
+    //blackbox: ['module.js', 'node.js']
   }).toString());
+  console.log(chalk.red(err.stack));
   process.exit(1);
 }
 
@@ -64,6 +64,6 @@ function handleUncaughtRejection(err) {
   if (err instanceof Error) {
     throw err;
   } else {
-    throw new Err(err);
+    throw new Error(err || 'Uncaught rejection');
   }
 }
