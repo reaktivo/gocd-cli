@@ -2,11 +2,15 @@
 
 var path = require('path');
 
-var modulesDir = path.join(__dirname, '..', 'node_modules');
+var rootDir = path.join(__dirname, '..');
+var modulesDir = path.join(rootDir, 'node_modules');
 
 require('babel-register')({
   ignore: function(filename) {
-    return filename.indexOf(modulesDir) !== -1;
+    return (
+      filename.indexOf(modulesDir) !== -1
+      || filename.indexOf(rootDir) === -1
+    );
   }
 });
 
