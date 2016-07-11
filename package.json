@@ -8,7 +8,7 @@
     "cov": "nyc --reporter=lcov npm test && nyc report"
   },
   "bin": {
-    "gocd": "bin/gocd"
+    "gocd": "bin/.gocd"
   },
   "author": "",
   "license": "ISC",

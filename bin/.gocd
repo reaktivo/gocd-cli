@@ -1,0 +1,13 @@
+#! /usr/bin/env node --harmony
+
+var path = require('path');
+
+var modulesDir = path.join(__dirname, '..', 'node_modules');
+
+require('babel-register')({
+  ignore: function(filename) {
+    return filename.indexOf(modulesDir) !== -1;
+  }
+});
+
+require('./gocd');
