@@ -1,6 +1,6 @@
 {
   "name": "gocd-cli",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "dependencies": {
     "babel-preset-es2015": {
       "version": "6.9.0",
