@@ -1,5 +1,7 @@
 # GOCD cli client
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/reaktivo/gocd-cli.svg)](https://greenkeeper.io/)
+
 
 ## Install
 
